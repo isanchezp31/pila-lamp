@@ -44,4 +44,5 @@ Despliegue automatizado de una aplicación web PHP en **dos niveles** usando **V
 ## 5. Comprobación de la aplicación
 Accediendo desde el navegador a `http://localhost:8080`, la aplicación carga correctamente y permite gestionar los usuarios almacenados en el servidor de base de datos.
 
-![Aplicación web funcionando](img/captura4.png)
+![Aplicación web funcionando](img/localhost1.png)
+![Aplicacion web funcionando2](img/localhost2.png)
