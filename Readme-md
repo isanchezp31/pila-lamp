@@ -1,41 +1,47 @@
-# Implantación de Pila LAMP en dos niveles con Vagrant
-## 1. Introducción
-En esta práctica se despliega una infraestructura web en **dos niveles** sobre Debian 12 utilizando **Vagrant** y **VirtualBox**, separando la capa de presentación/lógica (Apache + PHP) de la capa de datos (MariaDB/MySQL) para mejorar la seguridad y escalabilidad.
+# Pila LAMP en dos niveles con Vagrant
 
-## 2. Arquitectura de red y máquinas
-| Máquina (Hostname) | Sistema Operativo | Red Privada | Red Pública / Acceso | Rol |
-| :--- | :--- | :--- | :--- | :--- |
-| `ImanolSanchezApache` | Debian 12 (`debian/bookworm64`) | `192.168.56.10` | NAT + Port Forwarding (`8080 -> 80`) | Servidor Web Apache + PHP |
-| `ImanolSanchezMysql` | Debian 12 (`debian/bookworm64`) | `192.168.56.20` | Sin acceso a Internet | Servidor de Base de Datos |
+## 1. Descripción y arquitectura
+Despliegue automatizado de una aplicación web PHP en **dos niveles** usando **Vagrant**, **VirtualBox** y **Debian 12 (`debian/bookworm64`)**:
 
-![Despliegue con Vagrant Up](img/01_vagrant_up.png)
+* **`ImanolSanchezApache` (`192.168.56.10`)**: Servidor web con Apache y PHP. Tiene acceso a Internet por NAT y redirección de puertos (`8080` del anfitrión al `80` de la máquina).
+* **`ImanolSanchezMysql` (`192.168.56.20`)**: Servidor de base de datos MariaDB/MySQL. Está aislado sin salida a Internet y solo acepta conexiones desde la máquina web.
 
-## 3. Fichero Vagrantfile
-Define las dos máquinas virtuales sobre el box `debian/bookworm64`:
-* **`config.vm.define "apache"`**: Asigna el hostname `ImanolSanchezApache`, redirige el puerto `8080` del anfitrión al `80` del invitado (`forwarded_port`), configura la IP privada `192.168.56.10` y ejecuta `provision_apache.sh`.
-* **`config.vm.define "mysql"`**: Asigna el hostname `ImanolSanchezMysql`, configura la IP privada `192.168.56.20` y ejecuta `provision_mysql.sh`.
+![Estado de Vagrant](img/captu)
 
-## 4. Aprovisionamiento del servidor de Base de Datos (`ImanolSanchezMysql`)
-Explicación de las órdenes ejecutadas en `provision_mysql.sh`:
-* `apt update && apt install mariadb-server git -y`: Actualiza los repositorios e instala el motor de base de datos MariaDB.
-* `sed -i "s/^bind-address.*/bind-address = 192.168.56.20/" ...`: Modifica la interfaz de escucha para aceptar conexiones desde la red privada en lugar de limitarse a `127.0.0.1`.
-* `CREATE DATABASE` / `CREATE USER` / `GRANT ALL PRIVILEGES`: Crea la base de datos de la aplicación y un usuario autorizado exclusivamente desde la IP del servidor web (`192.168.56.10`).
-* `mysql -u root $DB_NAME < ...`: Importa la estructura inicial de tablas desde el fichero `.sql`.
-* `ip route del default`: Elimina la puerta de enlace por defecto de la interfaz NAT de Vagrant, garantizando que el servidor de base de datos quede completamente aislado sin salida a Internet.
+---
 
-![Estado de MariaDB y aislamiento de red](img/03_mysql_status_sin_internet.png)
+## 2. Explicación del `Vagrantfile`
+* `config.vm.box = "debian/bookworm64"`: Define la imagen base de Debian 12 para ambas máquinas.
+* `config.vm.define "apache"`: Crea la máquina web, le asigna el nombre `ImanolSanchezApache`, configura el reenvío de puertos (`8080 -> 80`), la IP privada `192.168.56.10` y ejecuta `provision_apache.sh`.
+* `config.vm.define "mysql"`: Crea la máquina de base de datos, le asigna el nombre `ImanolSanchezMysql`, la IP privada `192.168.56.20` y ejecuta `provision_mysql.sh`.
 
-## 5. Aprovisionamiento del servidor Web (`ImanolSanchezApache`)
-Explicación de las órdenes ejecutadas en `provision_apache.sh`:
-* `apt update && apt install apache2 php libapache2-mod-php php-mysql git -y`: Instala el servidor web Apache, el intérprete PHP, el módulo de integración con Apache y el conector para MySQL/MariaDB.
-* `rm -f /var/www/html/index.html`: Elimina la página de bienvenida por defecto de Apache.
-* `git clone ...` y `cp -r ...`: Descarga el código fuente de la aplicación de gestión de usuarios y lo despliega en el `DocumentRoot` (`/var/www/html`).
-* `sed -i "s/localhost/192.168.56.20/g" /var/www/html/config.php`: Configura la aplicación para que apunte al servidor de base de datos en segundo nivel.
-* `chown -R www-data:www-data /var/www/html`: Asigna la propiedad de los archivos al usuario del servicio Apache.
+---
 
-![Estado de Apache](img/02_apache_status.png)
+## 3. Aprovisionamiento de Base de Datos (`provision_mysql.sh`)
+* `apt update && apt install mariadb-server git -y`: Actualiza los repositorios e instala el servidor MariaDB y Git.
+* `sed -i "s/^bind-address.*/bind-address = 192.168.56.20/" ...`: Configura MariaDB para escuchar peticiones desde la red privada.
+* `systemctl restart mariadb`: Reinicia el servicio para aplicar el cambio de red.
+* `mysql -u root <<< "..."`: Crea la base de datos `lamp_db` y el usuario `lamp_user` con permisos exclusivos desde la IP de Apache (`192.168.56.10`).
+* `git clone ...` y `mysql -u root $DB_NAME < /tmp/app/db/database.sql`: Descarga el repositorio de la práctica e importa la tabla `users`.
+* `ip route del default`: Elimina la puerta de enlace por defecto para dejar el servidor sin salida a Internet.
 
-## 6. Comprobación y despliegue de la aplicación
-Accediendo desde el navegador del equipo anfitrión a `http://localhost:8080`, se verifica el funcionamiento completo de la aplicación conectando con la base de datos remota.
+![MariaDB corriendo y sin salida a Internet](img/captura2.png)
 
-![Aplicación funcionando](img/04_app_funcionando.png)
+---
+
+## 4. Aprovisionamiento del Servidor Web (`provision_apache.sh`)
+* `apt update && apt install apache2 php libapache2-mod-php php-mysql git -y`: Instala Apache, PHP y el conector para MySQL/MariaDB.
+* `rm -f /var/www/html/index.html`: Borra la página por defecto de Apache.
+* `git clone ...` y `cp -r /tmp/app/src/* /var/www/html/`: Copia el código de la aplicación web al directorio público de Apache.
+* `cat << 'EOF' > /var/www/html/config.php`: Configura los datos de conexión apuntando a la IP privada `192.168.56.20`.
+* `chown -R www-data:www-data /var/www/html` y `chmod -R 755 /var/www/html`: Asigna permisos al usuario de Apache.
+* `systemctl restart apache2`: Reinicia el servidor web.
+
+![Apache corriendo](img/captura3.png)
+
+---
+
+## 5. Comprobación de la aplicación
+Accediendo desde el navegador a `http://localhost:8080`, la aplicación carga correctamente y permite gestionar los usuarios almacenados en el servidor de base de datos.
+
+![Aplicación web funcionando](img/captura4.png)
