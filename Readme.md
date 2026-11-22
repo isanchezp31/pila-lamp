@@ -25,7 +25,7 @@ Despliegue automatizado de una aplicación web PHP en **dos niveles** usando **V
 * `git clone ...` y `mysql -u root $DB_NAME < /tmp/app/db/database.sql`: Descarga el repositorio de la práctica e importa la tabla `users`.
 * `ip route del default`: Elimina la puerta de enlace por defecto para dejar el servidor sin salida a Internet.
 
-![MariaDB corriendo y sin salida a Internet](img/captura2.png)
+![MariaDB corriendo y sin salida a Internet](img/mysql1.png)
 
 ---
 
@@ -37,7 +37,7 @@ Despliegue automatizado de una aplicación web PHP en **dos niveles** usando **V
 * `chown -R www-data:www-data /var/www/html` y `chmod -R 755 /var/www/html`: Asigna permisos al usuario de Apache.
 * `systemctl restart apache2`: Reinicia el servidor web.
 
-![Apache corriendo](img/captura3.png)
+![Apache corriendo](img/apache1.png)
 
 ---
 
