@@ -6,7 +6,7 @@ Despliegue automatizado de una aplicación web PHP en **dos niveles** usando **V
 * **`ImanolSanchezApache` (`192.168.56.10`)**: Servidor web con Apache y PHP. Tiene acceso a Internet por NAT y redirección de puertos (`8080` del anfitrión al `80` de la máquina).
 * **`ImanolSanchezMysql` (`192.168.56.20`)**: Servidor de base de datos MariaDB/MySQL. Está aislado sin salida a Internet y solo acepta conexiones desde la máquina web.
 
-![Estado de Vagrant](img/estado vagrant.png)
+![Estado de Vagrant](img/estadovagrant.png)
 
 ---
 
